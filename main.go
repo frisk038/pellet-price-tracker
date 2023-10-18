@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"htmlparser/adapters"
 	"htmlparser/business"
+	"net/http"
 	"os"
-
-	"github.com/robfig/cron"
 )
 
 func main() {
@@ -24,14 +23,16 @@ func main() {
 
 	bn := business.NewBusinessNotifier(tlgm, btgz, ckrh, URL)
 
-	cr := cron.New()
-	cr.AddFunc("0 30 * * * *", func() {
-		err := bn.SendPriceUpdate(context.Background())
+	http.HandleFunc("/update", func(w http.ResponseWriter, req *http.Request) {
+		err = bn.SendPriceUpdate(context.Background())
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprint(w, err)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
+		w.WriteHeader(http.StatusOK)
 	})
-	cr.Start()
+
+	http.ListenAndServe(":8080", nil)
 
 	select {}
 }
